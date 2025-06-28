@@ -1,0 +1,34 @@
+{
+    "monitor_config": "monitor_config.json",
+    "enable_port_knocking": true,
+    "enable_behavioral_monitoring": true,
+    "enable_command_capture": true,
+    "integration_log_file": "integrated_security.log",
+    "webhook_url": null,
+    "alert_threshold": 0.8,
+    "auto_blacklist": true,
+    "session_timeout_minutes": 30,
+    "health_check_interval_seconds": 60,
+    "notification_settings": {
+        "enable_email": false,
+        "enable_webhook": false,
+        "enable_syslog": true,
+        "email_recipients": [],
+        "webhook_url": null
+    },
+    "action_settings": {
+        "enable_auto_blacklist": true,
+        "enable_ssh_blocking": true,
+        "enable_notification": true,
+        "enable_logging": true,
+        "blacklist_threshold": 0.8,
+        "warning_threshold": 0.6
+    },
+    "monitoring_settings": {
+        "command_window_size": 10,
+        "session_timeout_minutes": 30,
+        "max_commands_per_session": 1000,
+        "enable_real_time_analysis": true,
+        "enable_session_tracking": true
+    }
+} 

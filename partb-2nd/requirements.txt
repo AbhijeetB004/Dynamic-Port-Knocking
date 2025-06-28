@@ -1,0 +1,31 @@
+# common dependencies
+pandas
+pyarrow
+
+# section0 dependencies
+
+
+# section1 dependencies
+numpy
+matplotlib
+seaborn
+scikit-learn
+wordcloud
+
+# section2 dependencies
+matplotlib
+seaborn
+scikit-learn
+
+# section3 dependencies
+numpy
+matplotlib
+seaborn
+scikit-learn
+wordcloud
+
+# section4 dependencies
+matplotlib
+scikit-learn
+torch
+transformers

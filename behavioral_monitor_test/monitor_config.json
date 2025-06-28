@@ -1,0 +1,83 @@
+{
+    "log_file": "behavioral_monitor.log",
+    "log_level": "INFO",
+    "blacklist_file": "blacklisted_users.json",
+    "model_dir": "partb-2nd/results/models",
+    "max_session_commands": 1000,
+    "risk_threshold": 0.7,
+    "command_window_size": 10,
+    "session_timeout_minutes": 30,
+    "update_interval_seconds": 5,
+    "ssh_log_file": "/var/log/auth.log",
+    "enable_real_time_monitoring": true,
+    "enable_blacklisting": true,
+    "notification_webhook": null,
+    "backup_interval_hours": 24,
+    "ml_model_weights": {
+        "random_forest": 0.4,
+        "logistic_regression": 0.3,
+        "svm": 0.3
+    },
+    "suspicious_patterns": {
+        "system_reconnaissance": [
+            "cat /proc/cpuinfo",
+            "cat /proc/mounts",
+            "uname -a",
+            "lscpu",
+            "cat /etc/passwd",
+            "cat /etc/shadow",
+            "ps aux",
+            "netstat",
+            "ss -tuln",
+            "lsof",
+            "who",
+            "w",
+            "last"
+        ],
+        "privilege_escalation": [
+            "sudo",
+            "su",
+            "chmod +s",
+            "chown",
+            "passwd",
+            "chpasswd",
+            "visudo",
+            "id",
+            "whoami"
+        ],
+        "persistence": [
+            "crontab",
+            "systemctl",
+            "service",
+            "chkconfig",
+            "rc.local",
+            "init.d",
+            "systemd",
+            "cron",
+            "at"
+        ],
+        "data_exfiltration": [
+            "scp",
+            "rsync",
+            "nc",
+            "netcat",
+            "wget",
+            "curl",
+            "ftp",
+            "sftp",
+            "tar",
+            "zip",
+            "gzip"
+        ],
+        "defense_evasion": [
+            "history -c",
+            "rm -rf",
+            "shred",
+            "dd",
+            "echo \"\" >",
+            "truncate",
+            "chattr +i",
+            "chattr -i"
+        ]
+    }
+} 
