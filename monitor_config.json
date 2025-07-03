@@ -1,0 +1,16 @@
+{
+    "log_file": "behavioral_monitor.log",
+    "log_level": "INFO",
+    "blacklist_file": "blacklisted_users.json",
+    "model_dir": "partb-2nd/results/models",
+    "max_session_commands": 1000,
+    "risk_threshold": 0.7,
+    "command_window_size": 10,
+    "session_timeout_minutes": 30,
+    "update_interval_seconds": 5,
+    "ssh_log_file": "/var/log/auth.log",
+    "enable_real_time_monitoring": true,
+    "enable_blacklisting": true,
+    "notification_webhook": null,
+    "backup_interval_hours": 24
+}

@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+**/__pycache__/
 
 # Virtual environments
 venv/
@@ -12,16 +13,13 @@ ENV/
 behavioral_monitor.log
 integrated_security.log
 
-
 # Model files (large)
+Model/
 
 # IDE
 .vscode/
 
-
 # OS
-
-
 .env
 
 # Jupyter notebooks

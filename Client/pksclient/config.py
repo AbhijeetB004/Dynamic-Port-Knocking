@@ -14,6 +14,6 @@ class Config:
                         f"and/or enter the interface name manually.")
     
     server: str = "172.30.145.143"  # Linux server's IP address
-    own_address: str = "172.30.144.1"  # Your Windows IP address
+    own_address: str = "192.168.194.54"  # Your Windows IP address
     interface: str = get_interface_from_ip(own_address)
     target_port: int = 22

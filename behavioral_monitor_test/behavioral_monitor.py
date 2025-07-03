@@ -26,6 +26,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 import warnings
+import torch
+from transformers import BertTokenizer, BertModel
 warnings.filterwarnings('ignore')
 
 # Add the partb-2nd directory to the path to import utilities
@@ -36,6 +38,22 @@ try:
     from plotting_utils import save_plot
 except ImportError:
     print("Warning: Could not import partb-2nd utilities. Some features may be limited.")
+
+# Add intent class names (order must match training)
+intent_classes = [
+    'Defense Evasion', 'Discovery', 'Execution', 'Harmless', 'Impact', 'Other', 'Persistence'
+]
+
+class CustomBERTModel(torch.nn.Module):
+    def __init__(self, num_labels=7):
+        super().__init__()
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.classifier = torch.nn.Linear(self.bert.config.hidden_size, num_labels)
+    def forward(self, input_ids, attention_mask, token_type_ids=None):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        cls_output = outputs.last_hidden_state[:, 0, :]
+        logits = self.classifier(cls_output)
+        return logits
 
 class BehavioralMonitor:
     """
@@ -131,42 +149,29 @@ class BehavioralMonitor:
         self.logger = logging.getLogger('BehavioralMonitor')
     
     def load_ml_models(self):
-        """Load pre-trained ML models from partb-2nd project."""
-        model_dir = self.config['model_dir']
-        
+        """Load custom BERT model and tokenizer for SSH command intent classification, handling _orig_mod. prefix in state_dict."""
         try:
-            # Load TF-IDF vectorizer
-            vectorizer_path = os.path.join(model_dir, 'tfidf_vectorizer.pkl')
-            if os.path.exists(vectorizer_path):
-                with open(vectorizer_path, 'rb') as f:
-                    self.vectorizer = pickle.load(f)
-                self.logger.info("Loaded TF-IDF vectorizer")
-            
-            # Load classification models
-            model_files = {
-                'random_forest': 'random_forest_model.pkl',
-                'logistic_regression': 'logistic_regression_model.pkl',
-                'svm': 'svm_model.pkl'
-            }
-            
-            for model_name, filename in model_files.items():
-                model_path = os.path.join(model_dir, filename)
-                if os.path.exists(model_path):
-                    with open(model_path, 'rb') as f:
-                        self.models[model_name] = pickle.load(f)
-                    self.logger.info(f"Loaded {model_name} model")
-            
-            # Load feature names
-            features_path = os.path.join(model_dir, 'feature_names.pkl')
-            if os.path.exists(features_path):
-                with open(features_path, 'rb') as f:
-                    self.feature_names = pickle.load(f)
-            
-            if not self.models:
-                self.logger.warning("No ML models found. Using rule-based detection only.")
-                
+            model_path = os.path.join(os.path.dirname(__file__), 'Model', 'final_model.pth')
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+            self.bert_model = CustomBERTModel(num_labels=7)
+            state_dict = torch.load(model_path, map_location=self.device)
+            # Remove _orig_mod. prefix if present
+            new_state_dict = {}
+            for k, v in state_dict.items():
+                if k.startswith('_orig_mod.'):
+                    new_k = k[len('_orig_mod.'):]
+                else:
+                    new_k = k
+                new_state_dict[new_k] = v
+            self.bert_model.load_state_dict(new_state_dict)
+            self.bert_model.to(self.device)
+            self.bert_model.eval()
+            self.logger.info("Loaded custom BERT model and tokenizer for SSH command intent classification")
         except Exception as e:
-            self.logger.error(f"Error loading ML models: {e}")
+            self.bert_model = None
+            self.tokenizer = None
+            self.logger.error(f"Error loading custom BERT model: {e}")
             self.logger.info("Falling back to rule-based detection")
     
     def preprocess_commands(self, commands: List[str]) -> str:
@@ -202,40 +207,24 @@ class BehavioralMonitor:
             return np.array([])
     
     def predict_malicious_intent(self, commands: List[str]) -> Tuple[float, str]:
-        """Predict malicious intent using ML models."""
-        if not self.models:
+        """Predict malicious intent using custom BERT model (multi-label)."""
+        if not hasattr(self, 'bert_model') or self.bert_model is None or self.tokenizer is None:
             return self._rule_based_detection(commands)
-        
         try:
-            features = self.extract_features(commands)
-            if features.size == 0:
-                return self._rule_based_detection(commands)
-            
-            # Get predictions from all models
-            predictions = {}
-            for model_name, model in self.models.items():
-                try:
-                    if hasattr(model, 'predict_proba'):
-                        prob = model.predict_proba(features)[0]
-                        # Assuming malicious class is at index 1
-                        predictions[model_name] = prob[1] if len(prob) > 1 else prob[0]
-                    else:
-                        predictions[model_name] = float(model.predict(features)[0])
-                except Exception as e:
-                    self.logger.warning(f"Error with {model_name}: {e}")
-                    continue
-            
-            if not predictions:
-                return self._rule_based_detection(commands)
-            
-            # Ensemble prediction (average of all models)
-            avg_prob = np.mean(list(predictions.values()))
-            best_model = max(predictions, key=predictions.get)
-            
-            return avg_prob, best_model
-            
+            command_text = self.preprocess_commands(commands)
+            inputs = self.tokenizer(command_text, return_tensors='pt', truncation=True, padding=True, max_length=128)
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            with torch.no_grad():
+                logits = self.bert_model(**inputs)
+                probs = torch.sigmoid(logits).cpu().numpy()[0]  # shape: (7,)
+            # Harmless is index 3; all others are malicious
+            malicious_indices = [i for i, name in enumerate(intent_classes) if name != 'Harmless']
+            malicious_probs = probs[malicious_indices]
+            max_prob = float(malicious_probs.max())
+            max_intent = intent_classes[malicious_indices[malicious_probs.argmax()]]
+            return max_prob, f'bert_{max_intent}'
         except Exception as e:
-            self.logger.error(f"Error in ML prediction: {e}")
+            self.logger.error(f"Error in BERT prediction: {e}")
             return self._rule_based_detection(commands)
     
     def _rule_based_detection(self, commands: List[str]) -> Tuple[float, str]:
