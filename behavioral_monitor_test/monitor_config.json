@@ -2,7 +2,7 @@
     "log_file": "behavioral_monitor.log",
     "log_level": "INFO",
     "blacklist_file": "blacklisted_users.json",
-    "model_dir": "partb-2nd/results/models",
+    "model_dir": "/mnt/d/DPKS - NPS lab/partb-2nd/results/models",
     "max_session_commands": 1000,
     "risk_threshold": 0.7,
     "command_window_size": 10,

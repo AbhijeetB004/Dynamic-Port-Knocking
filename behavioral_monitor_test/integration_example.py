@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-"""
-Integration Example: Port Knocking + Behavioral Monitoring
-
-This example shows how to integrate the AI-based behavioral monitoring system
-with the existing dynamic port knocking system.
-"""
-
 import os
 import sys
 import time
@@ -16,18 +8,10 @@ from datetime import datetime
 from behavioral_monitor import BehavioralMonitor
 from ssh_command_capture import SSHCommandCapture
 
-# Import your existing port knocking system
-try:
-    sys.path.append('Server')
-    import pks
-    from pks.core import Core
-    from pks.config import Config
-except ImportError:
-    print("Warning: Port knocking system not found. Running in monitoring-only mode.")
 
 class IntegratedSecuritySystem:
     """
-    Integrated security system combining port knocking and behavioral monitoring.
+    Integrated security system combining behavioral monitoring and SSH command capture.
     """
     
     def __init__(self, config_path: str = "integrated_config.json"):
@@ -38,11 +22,6 @@ class IntegratedSecuritySystem:
         # Initialize components
         self.behavioral_monitor = BehavioralMonitor(self.config['monitor_config'])
         self.command_capture = SSHCommandCapture(self._handle_ssh_event)
-        
-        # Port knocking system (if available)
-        self.port_knocking = None
-        if 'pks' in sys.modules:
-            self.port_knocking = Core()
         
         # Integration state
         self.integration_active = False
@@ -113,11 +92,6 @@ class IntegratedSecuritySystem:
             self.command_capture.start_capture('log_monitoring')
             self.logger.info("Command capture started")
         
-        # Start port knocking (if available)
-        if self.config['enable_port_knocking'] and self.port_knocking:
-            self._start_port_knocking()
-            self.logger.info("Port knocking system started")
-        
         # Start integration monitoring thread
         self.integration_thread = threading.Thread(target=self._integration_monitor, daemon=True)
         self.integration_thread.start()
@@ -134,33 +108,10 @@ class IntegratedSecuritySystem:
         # Stop command capture
         self.command_capture.stop_capture()
         
-        # Stop port knocking
-        if self.port_knocking:
-            self._stop_port_knocking()
-        
         if self.integration_thread:
             self.integration_thread.join(timeout=5)
         
         self.logger.info("Integrated Security System stopped")
-    
-    def _start_port_knocking(self):
-        """Start the port knocking system."""
-        try:
-            if self.port_knocking:
-                # Initialize port knocking configuration
-                # This would depend on your specific port knocking implementation
-                self.logger.info("Port knocking system initialized")
-        except Exception as e:
-            self.logger.error(f"Error starting port knocking: {e}")
-    
-    def _stop_port_knocking(self):
-        """Stop the port knocking system."""
-        try:
-            if self.port_knocking:
-                # Cleanup port knocking
-                self.logger.info("Port knocking system stopped")
-        except Exception as e:
-            self.logger.error(f"Error stopping port knocking: {e}")
     
     def _handle_ssh_event(self, event: dict):
         """Handle SSH events from command capture."""
@@ -178,9 +129,11 @@ class IntegratedSecuritySystem:
             
             # Log the event
             self.logger.info(f"SSH Event: {event_type} - User: {username} - Command: {command}")
-            
+            print(f"[INTEGRATION] SSH Event: {event_type} - User: {username} - Command: {command}")
+        
         except Exception as e:
             self.logger.error(f"Error handling SSH event: {e}")
+            print(f"[INTEGRATION] Error handling SSH event: {e}")
     
     def _handle_user_login(self, username: str, timestamp: str):
         """Handle user login event."""
@@ -204,7 +157,7 @@ class IntegratedSecuritySystem:
         """Handle user command event."""
         if not command:
             return
-        
+        print(f"[INTEGRATION] User: {username} ran command: {command}")
         # Update session information
         with self.session_lock:
             if username in self.active_sessions:
@@ -389,7 +342,6 @@ class IntegratedSecuritySystem:
                 'blacklisted_users': monitor_stats['blacklisted_users'],
                 'total_sessions': monitor_stats['total_sessions'],
                 'suspicious_commands': monitor_stats['suspicious_commands'],
-                'port_knocking_active': self.port_knocking is not None,
                 'behavioral_monitoring_active': self.config['enable_behavioral_monitoring'],
                 'command_capture_active': self.config['enable_command_capture']
             }

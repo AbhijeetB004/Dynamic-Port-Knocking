@@ -20,6 +20,7 @@ import threading
 from datetime import datetime
 from typing import Dict, List, Optional, Callable
 import re
+import argparse
 
 class SSHCommandCapture:
     """Captures SSH commands in real-time for behavioral monitoring."""
@@ -52,24 +53,18 @@ class SSHCommandCapture:
             
             # Create audit rules for SSH command capture
             audit_rules = [
-                # Monitor execve syscalls for SSH processes
-                '-a always,exit -F arch=b64 -S execve -F path=/usr/bin/ssh -k ssh_commands',
-                '-a always,exit -F arch=b64 -S execve -F path=/usr/bin/bash -k ssh_commands',
-                '-a always,exit -F arch=b64 -S execve -F path=/bin/bash -k ssh_commands',
-                '-a always,exit -F arch=b64 -S execve -F path=/bin/sh -k ssh_commands',
-                
-                # Monitor file writes for command history
-                '-w /home -p wa -k ssh_commands',
-                '-w /root -p wa -k ssh_commands',
-                
-                # Monitor specific files
-                '-w /var/log/auth.log -p wa -k ssh_commands',
-                '-w /var/log/secure -p wa -k ssh_commands'
+                # Syscall rule: capture all execve calls (all commands)
+                ['-a', 'always,exit', '-F', 'arch=b64', '-S', 'execve', '-k', 'ssh_commands'],
+                # File watches (optional, not for command capture)
+                ['-w', '/home', '-p', 'wa', '-k', 'ssh_commands'],
+                ['-w', '/root', '-p', 'wa', '-k', 'ssh_commands'],
+                ['-w', '/var/log/auth.log', '-p', 'wa', '-k', 'ssh_commands'],
+                ['-w', '/var/log/secure', '-p', 'wa', '-k', 'ssh_commands']
             ]
             
             # Add rules to auditd
             for rule in audit_rules:
-                subprocess.run(['auditctl', '-w'] + rule.split()[1:], check=True)
+                subprocess.run(['auditctl'] + rule, check=True)
             
             self.logger.info("auditd rules configured successfully")
             return True
@@ -81,7 +76,7 @@ class SSHCommandCapture:
             self.logger.error(f"Unexpected error setting up auditd: {e}")
             return False
     
-    def start_capture(self, method: str = 'auditd'):
+    def start_capture(self, method: str = 'log_monitoring'):
         """Start command capture using specified method."""
         if self.capture_active:
             self.logger.warning("Command capture is already active")
@@ -90,22 +85,16 @@ class SSHCommandCapture:
         self.capture_active = True
         
         if method == 'auditd':
-            if self.setup_auditd():
-                self.capture_thread = threading.Thread(target=self._capture_auditd, daemon=True)
-                self.capture_thread.start()
-                self.logger.info("Started auditd-based command capture")
-            else:
-                self.logger.error("Failed to setup auditd, falling back to log monitoring")
-                self._start_log_monitoring()
-        
+            print("[WARNING] auditd is not supported in WSL. Falling back to log monitoring.")
+            self._start_log_monitoring()
+            self.logger.info("Started log monitoring (WSL fallback)")
         elif method == 'strace':
-            self.capture_thread = threading.Thread(target=self._capture_strace, daemon=True)
-            self.capture_thread.start()
-            self.logger.info("Started strace-based command capture")
-        
+            print("[WARNING] strace is not supported in WSL. Falling back to log monitoring.")
+            self._start_log_monitoring()
+            self.logger.info("Started log monitoring (WSL fallback)")
         elif method == 'log_monitoring':
             self._start_log_monitoring()
-        
+            self.logger.info("Started log monitoring")
         else:
             self.logger.error(f"Unknown capture method: {method}")
             self.capture_active = False
@@ -373,10 +362,14 @@ def test_command_capture():
     def callback(event):
         print(f"Captured event: {json.dumps(event, indent=2)}")
     
+    parser = argparse.ArgumentParser(description='SSH Command Capture Test (WSL: only log_monitoring works)')
+    parser.add_argument('--method', default='log_monitoring', choices=['auditd', 'strace', 'log_monitoring'], help='Capture method to use (WSL: only log_monitoring works)')
+    args = parser.parse_args()
+    
     capture = SSHCommandCapture(callback)
     
-    print("Starting command capture test...")
-    capture.start_capture('log_monitoring')
+    print(f"Starting command capture test using method: {args.method} ...")
+    capture.start_capture(args.method)
     
     try:
         while True:
