@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+behavioral_env/
+ai/behavioral_env/
+env/
+ENV/
+.venv/
+
+# Logs
+*.log
+behavioral_monitor.log
+integrated_security.log
+
+# Model files (large)
+Model/
+*.h5
+*.hdf5
+*.pth
+*.pkl
+*.joblib
+*.ckpt
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.env
+.DS_Store
+Thumbs.db
+
+# Jupyter notebooks
+.ipynb_checkpoints/

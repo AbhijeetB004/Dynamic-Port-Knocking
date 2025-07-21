@@ -1,0 +1,45 @@
+{
+  "logging": {
+    "level": "INFO",
+    "log_file": "monitor.log"
+  },
+  "capture": {
+    "hook_directory": "/tmp/ssh_hooks",
+    "process_check_interval": 5,
+    "file_check_interval": 2
+  },
+  "ai_model": {
+    "model_path": "./Model/final_model.pth",
+    "max_sequence_length": 128
+  },
+  "response": {
+    "blacklist_file": "/tmp/blacklisted_users.json",
+    "port_knocking_blacklist_file": "/tmp/port_knocking_blacklist.json",
+    "blacklist_duration": 3600,
+    "max_history": 1000,
+    "cleanup_interval": 60
+  },
+  "analysis": {
+    "max_command_history": 20,
+    "min_commands_for_analysis": 5,
+    "analysis_window": 10
+  },
+  "thresholds": {
+    "blacklist_threshold": 0.85,
+    "warning_threshold": 0.6,
+    "monitor_threshold": 0.3,
+    "max_warnings": 2
+  },
+  "session": {
+    "inactive_timeout": 1800,
+    "cleanup_interval": 600
+  },
+  "monitoring": {
+    "stats_interval": 60
+  },
+  "telegram": {
+    "enabled": true,
+    "bot_token": "7422598862:AAE-eW-zvlT-5D8yWcuXBKwcLwpOTBdE_ao",
+    "chat_id": "5145713074"
+  }
+} 
